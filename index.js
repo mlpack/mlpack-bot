@@ -1,13 +1,14 @@
 const staleConfig = {
-    daysUntilStale: 60,
+    daysUntilStale: 30,
     daysUntilClose: 7,
     exemptLabels: [ 's: keep-open' ],
     exemptProjects: true,
     exemptMilestones: true,
     exemptAssignees: false,
-    staleLabels: 's: stale',
+    staleLabel: 's: stale',
     markComment: 'This issue has been automatically marked as stale because it has not had any recent activity.  It will be closed in 7 days if no further activity occurs.  Thank you for your contributions! :+1:',
-    limitPerRun: 30
+    limitPerRun: 30,
+    approvalComment: "Second approval provided automatically after 24 hours. :+1:"
 };
 
 const createScheduler = require('probot-scheduler')
@@ -145,6 +146,7 @@ module.exports = app => {
 
   app.on(events, unmark)
   app.on('schedule.repository', markAndSweep)
+  app.on('schedule.repository', autoApprove)
   app.on('issues.opened', issueOpened)
   app.on('pull_request.opened', prOpened)
   app.on('pull_request.reopened', prOpened)
@@ -194,5 +196,11 @@ module.exports = app => {
     const stale = await forRepository(context)
     await stale.markAndSweep('pulls')
     await stale.markAndSweep('issues')
+  }
+
+  async function autoApprove(context)
+  {
+    const stale = await forRepository(context)
+    await stale.autoApprove()
   }
 }

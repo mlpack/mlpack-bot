@@ -100,14 +100,14 @@ async function prReviewed(context)
       repo: context.payload.repository.name,
       number: context.payload.pull_request.number });
 
-  const approvals = reviews.data.map(review => review.state).filter(
-      word => word.toLowerCase() === 'approved').length
+  const approvals = reviews.data.map(review => [review.state, review.author_association]).filter(
+      data => data[0].toLowerCase() === 'approved' && data[1].toLowerCase() === 'member').length
 
   context.log("approvals:")
   context.log(approvals)
 
-  // Only post after the first approval.
-  if (approvals === 1)
+  // Only post after the second approval.
+  if (approvals === 2)
   {
     // The PR is approved.  Now, has this user ever had a PR merged before?
     const creator = context.payload.pull_request.user.login;

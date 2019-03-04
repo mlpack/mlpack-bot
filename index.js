@@ -1,7 +1,7 @@
 const staleConfig = {
     daysUntilStale: 30,
     daysUntilClose: 7,
-    exemptLabels: [ 's: keep-open' ],
+    exemptLabels: [ 's: keep open' ],
     exemptProjects: true,
     exemptMilestones: true,
     exemptAssignees: false,
@@ -14,7 +14,7 @@ const staleConfig = {
 const createScheduler = require('probot-scheduler')
 const Stale = require('./lib/stale')
 
-const newPRWelcomeComment = "Thanks for opening your first pull request in this repository!  Someone will review it when they have a chance.  In the mean time, please be sure that you've handled the following things, to make the review process quicker and easier:\n\n - All code should follow the [style guide](https://github.com/mlpack/mlpack/wiki/DesignGuidelines#style-guidelines)\n - Documentation added for any new functionality\n - Tests added for any new functionality\n - Headers and license information added to the top of any new code files\n - HISTORY.md updated if the changes are big or user-facing\n - All CI checks should be passing\n\nThank you again for your contributions!  :+1:"
+const newPRWelcomeComment = "Thanks for opening your first pull request in this repository!  Someone will review it when they have a chance.  In the mean time, please be sure that you've handled the following things, to make the review process quicker and easier:\n\n - All code should follow the [style guide](https://github.com/mlpack/mlpack/wiki/DesignGuidelines#style-guidelines)\n - Documentation added for any new functionality\n - Tests added for any new functionality\n - Tests that are added follow the [testing guide](https://github.com/mlpack/mlpack/wiki/Testing-Guidelines)\n - Headers and license information added to the top of any new code files\n - HISTORY.md updated if the changes are big or user-facing\n - All CI checks should be passing\n\nThank you again for your contributions!  :+1:"
 
 const stickerComment = "Hello there!  Thanks for your contribution.  I see that this is your first contribution to mlpack.  If you'd like to add your name to the list of contributors in `src/mlpack/core.hpp` and `COPYRIGHT.txt` and you haven't already, please feel free to push a change to this PR---or, if it gets merged before you can, feel free to open another PR.\n\nIn addition, if you'd like some stickers to put on your laptop, I'd be happy to help get them in the mail for you.  Just send an email with your physical mailing address to stickers@mlpack.org, and then one of the mlpack maintainers will put some stickers in an envelope for you.  It may take a few weeks to get them, depending on your location. :+1:"
 

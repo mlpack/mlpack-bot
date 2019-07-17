@@ -103,9 +103,6 @@ async function prReviewed(context)
   const approvals = reviews.data.map(review => [review.state, review.author_association]).filter(
       data => data[0].toLowerCase() === 'approved' && data[1].toLowerCase() === 'member').length
 
-  context.log("approvals:")
-  context.log(approvals)
-
   // Only post after the second approval.
   if (approvals === 2)
   {

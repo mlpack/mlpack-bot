@@ -90,21 +90,41 @@ async function prOpened(context)
 
 async function prReviewed(context)
 {
-  const pullRequest = await context.github.pullRequests.get({
-      owner: context.payload.repository.owner.login,
+  // Check if it has approvals.
+  let reviews = await this.github.pullRequests.listReviews({
+      owner: context.payload.pull_request.user.login,
       repo: context.payload.repository.name,
       number: context.payload.pull_request.number });
+  let page = 1;
+  let approvals = [];
 
-  const reviews = await context.github.pullRequests.getReviews({
-      owner: context.payload.repository.owner.login,
+  do
+  {
+    approvals = approvals.concat(reviews.data.map(review => [review.state, review.author_association, review.user.login, review.submitted_at]).filter(
+        data => data[0].toLowerCase() === 'approved' && data[1].toLowerCase() === 'member' && new Date(data[3]) < timestamp))
+
+    page++;
+    reviews = await this.github.pullRequests.listReviews({
+      owner: context.payload.pull_request.user.login,
       repo: context.payload.repository.name,
-      number: context.payload.pull_request.number });
+      number: context.payload.pull_request.number,
+      page: page });
+  } while (reviews.data !== undefined && reviews.data.length != 0)
 
-  const approvals = reviews.data.map(review => [review.state, review.author_association]).filter(
-      data => data[0].toLowerCase() === 'approved' && data[1].toLowerCase() === 'member').length
+  // Filter non-unique approvals.
+  const approvalMap = new Map();
+  const uniqueApprovals = [];
+  for (const item of approvals)
+  {
+    if (!approvalMap.has(item[2]))
+    {
+      approvalMap.set(item[2], true);
+      uniqueApprovals.push(item);
+    }
+  }
 
   // Only post after the second approval.
-  if (approvals === 2)
+  if (uniqueApprovals.length === 2)
   {
     // The PR is approved.  Now, has this user ever had a PR merged before?
     const creator = context.payload.pull_request.user.login;

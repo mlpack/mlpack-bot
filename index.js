@@ -2,7 +2,7 @@ const staleConfig = {
     daysUntilStale: 30,
     daysUntilClose: 7,
     exemptLabels: [ 's: keep open' ],
-    exemptProjects: true,
+    exemptProjects: false,
     exemptMilestones: true,
     exemptAssignees: false,
     staleLabel: 's: stale',
@@ -11,6 +11,7 @@ const staleConfig = {
     approvalComment: "Second approval provided automatically after 24 hours. :+1:"
 };
 
+process.env.IGNORED_ACCOUNTS = "Anupam-tripathi"
 const createScheduler = require('probot-scheduler')
 const Stale = require('./lib/stale')
 

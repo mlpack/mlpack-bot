@@ -92,8 +92,8 @@ async function prOpened(context)
 async function prReviewed(context)
 {
   // Check if it has approvals.
-  let reviews = await this.github.pullRequests.listReviews({
-      owner: context.payload.pull_request.user.login,
+  let reviews = await context.github.pullRequests.listReviews({
+      owner: context.payload.repository.owner.login,
       repo: context.payload.repository.name,
       number: context.payload.pull_request.number });
   let page = 1;
@@ -101,12 +101,14 @@ async function prReviewed(context)
 
   do
   {
-    approvals = approvals.concat(reviews.data.map(review => [review.state, review.author_association, review.user.login, review.submitted_at]).filter(
-        data => data[0].toLowerCase() === 'approved' && data[1].toLowerCase() === 'member' && new Date(data[3]) < timestamp))
+    approvals = approvals.concat(reviews.data.map(review => [review.state, review.author_association, review.user.login]).filter(
+        data => data[0].toLowerCase() === 'approved' &&
+                (data[1].toLowerCase() === 'member' ||
+                  (data[1].toLowerCase() === 'none' && data[2].toLowerCase() === 'mlpack-bot[bot]'))))
 
     page++;
-    reviews = await this.github.pullRequests.listReviews({
-      owner: context.payload.pull_request.user.login,
+    reviews = await context.github.pullRequests.listReviews({
+      owner: context.payload.repository.owner.login,
       repo: context.payload.repository.name,
       number: context.payload.pull_request.number,
       page: page });
@@ -134,7 +136,6 @@ async function prReviewed(context)
         q: `is:pr is:merged author:${creator} repo:${owner}/${repo}` })
     const mergedPRs = res.data.items.filter(
         pr => pr.number !== context.payload.pull_request.number).length
-
     // But what if we have already sent a sticker notification?
     if (mergedPRs === 0)
     {

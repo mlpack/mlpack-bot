@@ -136,8 +136,38 @@ async function prReviewed(context)
         q: `is:pr is:merged author:${creator} repo:${owner}/${repo}` })
     const mergedPRs = res.data.items.filter(
         pr => pr.number !== context.payload.pull_request.number).length
+
     // But what if we have already sent a sticker notification?
-    if (mergedPRs === 0)
+    // Check if it has comments from mlpack-bot that are the exact sticker
+    // comment..
+    let comments = await context.github.issues.listComments({
+        owner: context.payload.repository.owner.login,
+        repo: context.payload.repository.name,
+        number: context.payload.pull_request.number,
+        per_page: 100 });
+    let page = 1;
+    let commented = false;
+
+    do
+    {
+      let c_list = comments.data.map(comment => [comment.author_association, comment.user.login, comment.body]).filter(
+          data => (data[0].toLowerCase() === 'none' && data[1].toLowerCase() === 'mlpack-bot[bot]' && data[2] === stickerComment))
+      if (c_list.length > 0)
+      {
+        commented = true;
+        break;
+      }
+
+      page++;
+      comments = await context.github.issues.listComments({
+        owner: context.payload.repository.owner.login,
+        repo: context.payload.repository.name,
+        number: context.payload.pull_request.number,
+        page: page,
+        per_page: 100 });
+    } while (comments.data !== undefined && comments.data.length != 0)
+
+    if (mergedPRs === 0 && !commented)
     {
       try
       {

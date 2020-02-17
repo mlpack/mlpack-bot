@@ -182,6 +182,13 @@ async function prReviewed(context)
         }
       }
     }
+
+    // Try to remove any needs-review label, if it exists.
+    await context.github.issues.removeLabel({
+        context.payload.repository.owner.login,
+        context.payload.repository.name,
+        context.payload.pull_request.number,
+        name: 's: needs review'})
   }
 }
 

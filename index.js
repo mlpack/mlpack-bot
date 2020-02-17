@@ -133,7 +133,7 @@ async function prReviewed(context)
     const creator = context.payload.pull_request.user.login;
     const { owner, repo } = context.repo();
     const res = await context.github.search.issues({
-        q: `is:pr is:merged author:${creator} repo:${owner}/${repo}` })
+        q: `is:pr is:merged author:${creator} org:${owner}` })
     const mergedPRs = res.data.items.filter(
         pr => pr.number !== context.payload.pull_request.number).length
 

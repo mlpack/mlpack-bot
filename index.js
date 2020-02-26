@@ -92,7 +92,7 @@ async function prOpened(context)
 async function prReviewed(context)
 {
   // Check if it has approvals.
-  let reviews = await context.github.pullRequests.listReviews({
+  let reviews = await context.github.pulls.listReviews({
       owner: context.payload.repository.owner.login,
       repo: context.payload.repository.name,
       number: context.payload.pull_request.number });
@@ -107,7 +107,7 @@ async function prReviewed(context)
                   (data[1].toLowerCase() === 'none' && data[2].toLowerCase() === 'mlpack-bot[bot]'))))
 
     page++;
-    reviews = await context.github.pullRequests.listReviews({
+    reviews = await context.github.pulls.listReviews({
       owner: context.payload.repository.owner.login,
       repo: context.payload.repository.name,
       number: context.payload.pull_request.number,

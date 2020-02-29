@@ -162,7 +162,7 @@ async function prReviewed(context)
       comments = await context.github.issues.listComments({
         owner: context.payload.repository.owner.login,
         repo: context.payload.repository.name,
-        number: context.payload.pull_request.number,
+        issue_number: context.payload.pull_request.number,
         page: page,
         per_page: 100 });
     } while (comments.data !== undefined && comments.data.length != 0)

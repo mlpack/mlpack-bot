@@ -65,7 +65,7 @@ async function prOpened(context)
     }
 
     // Now check to see if we need to add a welcome comment for this.
-    const response = await context.github.issues.getForRepo(context.repo({
+    const response = await context.github.issues.listForRepo(context.repo({
         state: 'all',
         creator: context.payload.pull_request.user.login
     }));

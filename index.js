@@ -95,7 +95,7 @@ async function prReviewed(context)
   let reviews = await context.github.pulls.listReviews({
       owner: context.payload.repository.owner.login,
       repo: context.payload.repository.name,
-      number: context.payload.pull_request.number });
+      pull_number: context.payload.pull_request.number });
   let page = 1;
   let approvals = [];
 
@@ -110,7 +110,7 @@ async function prReviewed(context)
     reviews = await context.github.pulls.listReviews({
       owner: context.payload.repository.owner.login,
       repo: context.payload.repository.name,
-      number: context.payload.pull_request.number,
+      pull_number: context.payload.pull_request.number,
       page: page });
   } while (reviews.data !== undefined && reviews.data.length != 0)
 

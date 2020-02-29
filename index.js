@@ -132,7 +132,7 @@ async function prReviewed(context)
     // The PR is approved.  Now, has this user ever had a PR merged before?
     const creator = context.payload.pull_request.user.login;
     const { owner, repo } = context.repo();
-    const res = await context.github.search.issues({
+    const res = await context.github.search.issuesAndPullRequests({
         q: `is:pr is:merged author:${creator} org:${owner}` })
     const mergedPRs = res.data.items.filter(
         pr => pr.number !== context.payload.pull_request.number).length
@@ -143,7 +143,7 @@ async function prReviewed(context)
     let comments = await context.github.issues.listComments({
         owner: context.payload.repository.owner.login,
         repo: context.payload.repository.name,
-        number: context.payload.pull_request.number,
+        issue_number: context.payload.pull_request.number,
         per_page: 100 });
     let page = 1;
     let commented = false;
@@ -184,11 +184,19 @@ async function prReviewed(context)
     }
 
     // Try to remove any needs-review label, if it exists.
-    await context.github.issues.removeLabel({
+    labels = await context.github.issues.listLabelsOnIssue({
         owner: context.payload.repository.owner.login,
         repo: context.payload.repository.name,
-        number: context.payload.pull_request.number,
-        name: 's: needs review'})
+        issue_number: context.payload.pull_request.number})
+    let needs_review_count = labels.data.map(n => [n.name]).filter(n => (n[0] == 's: needs review'))
+    if (needs_review_count.length > 0)
+    {
+      await context.github.issues.removeLabel({
+          owner: context.payload.repository.owner.login,
+          repo: context.payload.repository.name,
+          issue_number: context.payload.pull_request.number,
+          name: 's: needs review'})
+    }
   }
 }
 

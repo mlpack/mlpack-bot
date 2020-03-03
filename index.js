@@ -11,7 +11,7 @@ const staleConfig = {
     approvalComment: "Second approval provided automatically after 24 hours. :+1:"
 };
 
-process.env.IGNORED_ACCOUNTS = "Anupam-tripathi"
+process.env.IGNORED_ACCOUNTS = "Anupam-tripathi,Anupam-tripathi-zz"
 const createScheduler = require('probot-scheduler')
 const Stale = require('./lib/stale')
 

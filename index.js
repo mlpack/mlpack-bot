@@ -33,12 +33,18 @@ async function issueOpened(context)
      * webhook event contains no labels.
      * https://github.com/eslint/eslint-github-bot/issues/38
      */
-    const issue = await github.issues.get(context.issue()).then((res) => res.data)
+    const issue = await github.issues.get({
+        owner: context.issue().owner,
+        repo: context.issue().repo,
+        issue_number: context.issue().number }).then((res) => res.data)
 
     if (issue.labels.length === 0)
     {
-      await github.issues.addLabels(context.issue({ labels:
-          ['s: unlabeled', 's: unanswered'] }))
+      await github.issues.addLabels({
+          owner: context.issue().owner,
+          repo: context.issue().repo,
+          issue_number: context.issue().number,
+          labels: ['s: unlabeled', 's: unanswered'] })
     }
   }
 }

@@ -206,6 +206,80 @@ async function prReviewed(context)
   }
 }
 
+async function prMerged(context)
+{
+  if (context.payload.pull_request.merged === true)
+  {
+    console.log("PR was merged!\n")
+    console.log("context:\n")
+    console.log(context);
+
+    /**
+     * Get the labels for the PR.
+     */
+    labels = await context.github.issues.listLabelsOnIssue({
+        owner: context.payload.repository.owner.login,
+        repo: context.payload.repository.name,
+        issue_number: context.payload.pull_request.number });
+
+    console.log("got labels:\n");
+    console.log(labels);
+
+    let release_count = labels.data.map(n => [n.name]).filter(n => (n[0] == 't: release'));
+    if (release_count.length > 0)
+    {
+      // Awesome, it was a release.  Get the relevant ref.
+      ref = await context.github.git.getRef({
+          owner: context.payload.repository.owner.login,
+          repo: context.payload.repository.name,
+          ref: "heads/master" });
+      console.log("got ref:\n");
+      console.log(ref);
+
+      // Two commits back should be the actual release (since there is a merge
+      // commit).
+      head_commit = await context.github.git.getCommit({
+          owner: context.payload.repository.owner.login,
+          repo: context.payload.repository.name,
+          sha: ref.data[0].object.sha });
+      console.log("head commit:\n");
+      console.log(head_commit);
+
+      parent_commit = await context.github.git.getCommit({
+          owner: context.payload.repository.owner.login,
+          repo: context.payload.repository.name,
+          sha: head_commit.data[0].parents[0].sha }); // Umm, I hope.
+
+      console.log("parent commit:\n");
+      console.log(parent_commit);
+
+      grandparent_commit = await context.github.git.getCommit({
+          owner: context.payload.repository.owner.login,
+          repo: context.payload.repository.name,
+          sha: parent_commit.data[0].parents[0].sha }); // Umm, I hope.
+
+      console.log("grandparent commit:\n");
+      console.log(grandparent_commit);
+
+      // Now create the tag...
+      // We'll have to get the release version from the PR...
+      release_tag_name = "mlpack-bot-release-test";
+
+      result = await context.github.git.createTag({
+          owner: context.payload.repository.owner.login,
+          repo: context.payload.repository.name,
+          tag: release_tag_name,
+          message: "Release test.",
+          object: grandparent_commit.data[0].sha,
+          type: "commit"
+      })
+
+      console.log("result:\n");
+      console.log(result);
+    }
+  }
+}
+
 module.exports = app => {
   // Visits all repositories to mark and sweep stale issues.
   const scheduler = createScheduler(app)
@@ -222,6 +296,7 @@ module.exports = app => {
   app.on('pull_request.reopened', prOpened)
   app.on('pull_request_review.submitted', prReviewed)
   app.on('pull_request_review.edited', prReviewed)
+  app.on('pull_request.closed', prMerged)
 
   async function forRepository(context)
   {

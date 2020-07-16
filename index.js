@@ -14,6 +14,7 @@ const staleConfig = {
 process.env.IGNORED_ACCOUNTS = "Anupam-tripathi,Anupam-tripathi-zz"
 const createScheduler = require('probot-scheduler')
 const Stale = require('./lib/stale')
+const { exec } = require("child_process")
 
 const newPRWelcomeComment = "Thanks for opening your first pull request in this repository!  Someone will review it when they have a chance.  In the mean time, please be sure that you've handled the following things, to make the review process quicker and easier:\n\n - All code should follow the [style guide](https://github.com/mlpack/mlpack/wiki/DesignGuidelines#style-guidelines)\n - Documentation added for any new functionality\n - Tests added for any new functionality\n - Tests that are added follow the [testing guide](https://github.com/mlpack/mlpack/wiki/Testing-Guidelines)\n - Headers and license information added to the top of any new code files\n - HISTORY.md updated if the changes are big or user-facing\n - All CI checks should be passing\n\nThank you again for your contributions!  :+1:"
 
@@ -229,6 +230,7 @@ async function prMerged(context)
     if (release_count.length > 0)
     {
       // Awesome, it was a release.  Get the relevant ref.
+      console.log("releaseTestOutput:\n")
       ref = await context.github.git.getRef({
           owner: context.payload.repository.owner.login,
           repo: context.payload.repository.name,
@@ -236,19 +238,46 @@ async function prMerged(context)
       console.log("got ref:\n");
       console.log(ref);
 
+      // Get the pull request name so we can parse it.
+      pr_data = await context.github.pulls.get({
+          owner: context.payload.repository.owner.login,
+          repo: context.payload.repository.name,
+          pull_number: context.payload.number
+      })
+      console.log("pr data:\n")
+      console.log(pr_data)
+
+      var titleRegex = /^Release version ([0-9]*).([0-9]*).([0-9]*): (.*)$/
+      var results = titleRegex.exec(pr_data.data.title)
+
+      major_version = results[1]
+      minor_version = results[2]
+      patch_version = results[3]
+      release_name = results[4]
+
+      // Compute the tag name for the new release.
+      release_tag_name = major_version.toString() + '.' +
+          minor_version.toString() + '.' + patch_version.toString();
+
+      // Compute the string that we will use for the description of the new
+      // version in the release.
+      var descrRegex = /### Changelog\n/m
+      var results = descrRegex.exec(pr_data.data.body)
+      changelog_text = pr_data.data.body.substring(results.index + 14, pr_data.data.body.length)
+
       // Two commits back should be the actual release (since there is a merge
       // commit).
       head_commit = await context.github.git.getCommit({
           owner: context.payload.repository.owner.login,
           repo: context.payload.repository.name,
-          sha: ref.data[0].object.sha });
+          commit_sha: ref.data.object.sha });
       console.log("head commit:\n");
       console.log(head_commit);
 
       parent_commit = await context.github.git.getCommit({
           owner: context.payload.repository.owner.login,
           repo: context.payload.repository.name,
-          sha: head_commit.data[0].parents[0].sha }); // Umm, I hope.
+          commit_sha: head_commit.data.parents[0].sha }); // Umm, I hope.
 
       console.log("parent commit:\n");
       console.log(parent_commit);
@@ -256,26 +285,73 @@ async function prMerged(context)
       grandparent_commit = await context.github.git.getCommit({
           owner: context.payload.repository.owner.login,
           repo: context.payload.repository.name,
-          sha: parent_commit.data[0].parents[0].sha }); // Umm, I hope.
+          commit_sha: parent_commit.data.parents[0].sha }); // Umm, I hope.
 
       console.log("grandparent commit:\n");
       console.log(grandparent_commit);
 
       // Now create the tag...
-      // We'll have to get the release version from the PR...
-      release_tag_name = "mlpack-bot-release-test";
-
       result = await context.github.git.createTag({
           owner: context.payload.repository.owner.login,
           repo: context.payload.repository.name,
           tag: release_tag_name,
           message: "Release test.",
-          object: grandparent_commit.data[0].sha,
+          object: grandparent_commit.data.sha,
           type: "commit"
       })
 
       console.log("result:\n");
       console.log(result);
+
+      // Now finally create the reference to the tag in the repository.
+      result = await context.github.git.createRef({
+          owner: context.payload.repository.owner.login,
+          repo: context.payload.repository.name,
+          sha: grandparent_commit.data.sha,
+          ref: ("refs/tags/" + release_tag_name)
+      })
+
+      const monthNames = ["Jan.", "Feb.", "Mar.", "Apr.", "May", "June", "July",
+          "Aug.", "Sep.", "Oct.", "Nov.", "Dec."]
+      const d = new Date();
+      bodyString = "Released " + monthNames[d.getMonth()] + " " +
+          d.getDate().toString() + ", " + d.getFullYear() + ".\n\n" +
+          changelog_text;
+
+      console.log("now create release\n")
+      result = await context.github.repos.createRelease({
+          owner: context.payload.repository.owner.login,
+          repo: context.payload.repository.name,
+          tag_name: release_tag_name,
+          name: "ensmallen " + release_tag_name + ": " + release_name,
+          body: bodyString,
+          draft: true
+      })
+      console.log("result:\n")
+      console.log(result)
+
+      // Lastly, we need to fire off the website update script.
+      // Note that /home/ryan/src/ensmallen-mlpack-bot/ should exist and be a
+      // clone of ensmallen.  All this has to happen in a screen session so that
+      // ssh keys are set up that can push to the ensmallen.org repo directly.
+      exec('screen -S pts-0 -p ensmallen.org -X stuff "cd /home/ryan/src/ensmallen-mlpack-bot/\n"',
+           function(error, stdout, stderr) {
+             if (error) { console.log(error) }
+             if (stderr) { console.log(stderr) }
+      })
+      exec('screen -S pts-0 -p ensmallen.org -X stuff "git pull\n"',
+           function(error, stdout, stderr) {
+             if (error) { console.log(error) }
+             if (stderr) { console.log(stderr) }
+      })
+      exec('screen -S pts-0 -p ensmallen.org -X stuff "scripts/update-website-after-release.sh ' +
+          major_version.toString() + ' ' + minor_version.toString() + ' ' +
+          patch_version.toString() + '\n"',
+           function(error, stdout, stderr) {
+             if (error) { console.log(error) }
+             if (stderr) { console.log(stderr) }
+             console.log(stdout)
+      })
     }
   }
 }

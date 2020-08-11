@@ -261,7 +261,7 @@ async function prMerged(context)
 
       // Compute the string that we will use for the description of the new
       // version in the release.
-      var descrRegex = /### Changelog\n/m
+      var descrRegex = /### Changelog\r?\n/m
       var results = descrRegex.exec(pr_data.data.body)
       changelog_text = pr_data.data.body.substring(results.index + 14, pr_data.data.body.length)
 

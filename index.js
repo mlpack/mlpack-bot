@@ -247,13 +247,13 @@ async function prMerged(context)
       console.log("pr data:\n")
       console.log(pr_data)
 
-      var titleRegex = /^Release version ([0-9]*).([0-9]*).([0-9]*): (.*)$/
+      var titleRegex = /^Release version ([0-9]*).([0-9]*).([0-9]*)(: )?(.*)$/
       var results = titleRegex.exec(pr_data.data.title)
 
       major_version = results[1]
       minor_version = results[2]
       patch_version = results[3]
-      release_name = results[4]
+      release_name = results[5]
 
       // Compute the tag name for the new release.
       release_tag_name = major_version.toString() + '.' +
@@ -282,21 +282,13 @@ async function prMerged(context)
       console.log("parent commit:\n");
       console.log(parent_commit);
 
-      grandparent_commit = await context.github.git.getCommit({
-          owner: context.payload.repository.owner.login,
-          repo: context.payload.repository.name,
-          commit_sha: parent_commit.data.parents[0].sha }); // Umm, I hope.
-
-      console.log("grandparent commit:\n");
-      console.log(grandparent_commit);
-
       // Now create the tag...
       result = await context.github.git.createTag({
           owner: context.payload.repository.owner.login,
           repo: context.payload.repository.name,
           tag: release_tag_name,
           message: "Release test.",
-          object: grandparent_commit.data.sha,
+          object: parent_commit.data.sha,
           type: "commit"
       })
 
@@ -307,7 +299,7 @@ async function prMerged(context)
       result = await context.github.git.createRef({
           owner: context.payload.repository.owner.login,
           repo: context.payload.repository.name,
-          sha: grandparent_commit.data.sha,
+          sha: parent_commit.data.sha,
           ref: ("refs/tags/" + release_tag_name)
       })
 
@@ -319,39 +311,81 @@ async function prMerged(context)
           changelog_text;
 
       console.log("now create release\n")
-      result = await context.github.repos.createRelease({
-          owner: context.payload.repository.owner.login,
-          repo: context.payload.repository.name,
-          tag_name: release_tag_name,
-          name: "ensmallen " + release_tag_name + ": " + release_name,
-          body: bodyString,
-          draft: true
-      })
-      console.log("result:\n")
-      console.log(result)
+      if (release_name != "")
+      {
+        result = await context.github.repos.createRelease({
+            owner: context.payload.repository.owner.login,
+            repo: context.payload.repository.name,
+            tag_name: release_tag_name,
+            name: "ensmallen " + release_tag_name + ": " + release_name,
+            body: bodyString,
+            draft: true
+        })
+        console.log("result:\n")
+        console.log(result)
+      }
+      else
+      {
+        result = await context.github.repos.createRelease({
+            owner: context.payload.repository.owner.login,
+            repo: context.payload.repository.name,
+            tag_name: release_tag_name,
+            name: "mlpack " + release_tag_name,
+            body: bodyString,
+            draft: true
+        })
+        console.log("result:\n")
+        console.log(result)
+      }
 
       // Lastly, we need to fire off the website update script.
       // Note that /home/ryan/src/ensmallen-mlpack-bot/ should exist and be a
       // clone of ensmallen.  All this has to happen in a screen session so that
       // ssh keys are set up that can push to the ensmallen.org repo directly.
-      exec('screen -S pts-0 -p ensmallen.org -X stuff "cd /home/ryan/src/ensmallen-mlpack-bot/\n"',
-           function(error, stdout, stderr) {
-             if (error) { console.log(error) }
-             if (stderr) { console.log(stderr) }
-      })
-      exec('screen -S pts-0 -p ensmallen.org -X stuff "git pull\n"',
-           function(error, stdout, stderr) {
-             if (error) { console.log(error) }
-             if (stderr) { console.log(stderr) }
-      })
-      exec('screen -S pts-0 -p ensmallen.org -X stuff "scripts/update-website-after-release.sh ' +
-          major_version.toString() + ' ' + minor_version.toString() + ' ' +
-          patch_version.toString() + '\n"',
-           function(error, stdout, stderr) {
-             if (error) { console.log(error) }
-             if (stderr) { console.log(stderr) }
-             console.log(stdout)
-      })
+      if (release_name != "")
+      {
+        // It's an ensmallen release.
+        exec('screen -S pts-3 -p ensmallen.org -X stuff "cd /home/ryan/src/ensmallen-mlpack-bot/\n"',
+             function(error, stdout, stderr) {
+               if (error) { console.log(error) }
+               if (stderr) { console.log(stderr) }
+        })
+        exec('screen -S pts-3 -p ensmallen.org -X stuff "git pull\n"',
+             function(error, stdout, stderr) {
+               if (error) { console.log(error) }
+               if (stderr) { console.log(stderr) }
+        })
+        exec('screen -S pts-3 -p ensmallen.org -X stuff "scripts/update-website-after-release.sh ' +
+            major_version.toString() + ' ' + minor_version.toString() + ' ' +
+            patch_version.toString() + '\n"',
+             function(error, stdout, stderr) {
+               if (error) { console.log(error) }
+               if (stderr) { console.log(stderr) }
+               console.log(stdout)
+        })
+      }
+      else
+      {
+        // It's an mlpack release.
+        exec('screen -S pts-3 -p mlpack.org -X stuff "cd /home/ryan/src/mlpack-mlpack-bot/\n"',
+            function(error, stdout, stderr) {
+              if (error) { console.log(error) }
+              if (stderr) { console.log(stderr) }
+        })
+        exec('screen -S pts-3 -p mlpack.org -X stuff "git pull\n"',
+            function(error, stdout, stderr) {
+              if (error) { console.log(error) }
+              if (stderr) { console.log(stderr) }
+        })
+        exec('screen -S pts-3 -p mlpack.org -X stuff "/home/ryan/bin/update-mlpack-website-after-release.sh ' +
+            major_version.toString() + ' ' + minor_version.toString() + ' ' +
+            patch_version.toString() + '\n"',
+            function(error, stdout, stderr) {
+              if (error) { console.log(error) }
+              if (stderr) { console.log(stderr) }
+              console.log(stdout)
+        })
+      }
     }
   }
 }

@@ -345,17 +345,17 @@ async function prMerged(context)
       if (release_name != "")
       {
         // It's an ensmallen release.
-        exec('screen -S pts-3 -p ensmallen.org -X stuff "cd /home/ryan/src/ensmallen-mlpack-bot/\n"',
+        exec('screen -S master -p ensmallen.org -X stuff "cd /home/ryan/src/ensmallen-mlpack-bot/\n"',
              function(error, stdout, stderr) {
                if (error) { console.log(error) }
                if (stderr) { console.log(stderr) }
         })
-        exec('screen -S pts-3 -p ensmallen.org -X stuff "git pull\n"',
+        exec('screen -S master -p ensmallen.org -X stuff "git pull\n"',
              function(error, stdout, stderr) {
                if (error) { console.log(error) }
                if (stderr) { console.log(stderr) }
         })
-        exec('screen -S pts-3 -p ensmallen.org -X stuff "scripts/update-website-after-release.sh ' +
+        exec('screen -S master -p ensmallen.org -X stuff "scripts/update-website-after-release.sh ' +
             major_version.toString() + ' ' + minor_version.toString() + ' ' +
             patch_version.toString() + '\n"',
              function(error, stdout, stderr) {
@@ -367,17 +367,17 @@ async function prMerged(context)
       else
       {
         // It's an mlpack release.
-        exec('screen -S pts-3 -p mlpack.org -X stuff "cd /home/ryan/src/mlpack-mlpack-bot/\n"',
+        exec('screen -S master -p mlpack.org -X stuff "cd /home/ryan/src/mlpack-mlpack-bot/\n"',
             function(error, stdout, stderr) {
               if (error) { console.log(error) }
               if (stderr) { console.log(stderr) }
         })
-        exec('screen -S pts-3 -p mlpack.org -X stuff "git pull\n"',
+        exec('screen -S master -p mlpack.org -X stuff "git pull\n"',
             function(error, stdout, stderr) {
               if (error) { console.log(error) }
               if (stderr) { console.log(stderr) }
         })
-        exec('screen -S pts-3 -p mlpack.org -X stuff "/home/ryan/bin/update-mlpack-website-after-release.sh ' +
+        exec('screen -S master -p mlpack.org -X stuff "/home/ryan/bin/update-mlpack-website-after-release.sh ' +
             major_version.toString() + ' ' + minor_version.toString() + ' ' +
             patch_version.toString() + '\n"',
             function(error, stdout, stderr) {
